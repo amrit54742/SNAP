@@ -5,11 +5,10 @@ import re
 import string
 import signal
 import os
-import random
 
 l = 1 / 2  # initializing lambda for poisson distribution
 e = 2.71828  # Euler's number
-# counter = 1
+counter = 1
 
 prev_ack_no = 0
 stat_col_map = ["sent_bytes", "nfast_retrans", "ntimeouts", "cwin", 'sample_rtt', 'cur_send_queue', 'rwin', 'sum_rtt', 'max_send_queue']  # socket statistics to be collected
@@ -19,27 +18,9 @@ ini_fast_retrans = 0
 ini_ntimeouts = 0
 max_send_queue = 0
 
-# factorial
-def fact(n):
-    ans = 1
-    for i in range(1, n + 1, 1):
-        ans *= i
-    return ans
-
-
-
-def poisson_interval(mean_interval):
-    """Generate an interval based on Poisson distribution."""
-    return random.expovariate(1 / mean_interval)
-
-mean_interval = 2  # Average interval in seconds (adjusted to 2 seconds)
-counter = 0
-
-
-
 # to calculate the poisson probability for k packet arrivals in l ms of time
-# def poisson(l, k):
-#     return ((e ** (-l)) * (l ** k)) / fact(k)
+def poisson(l, k):
+    return ((e ** (-l)) * (l ** k)) / fact(k)
 
 columns = {stat: [] for stat in stat_col_map}  # dictionary to store the statistics values
 timeout = 0.0005  # timeout between successive iterations
@@ -74,25 +55,12 @@ with open('MonitorOutput.csv', "w", newline='') as outfile:
 
             # Stop tcpdump gracefully after capturing the packets
             tcpdump_process.terminate()
-            # tcpdump_process.send_signal(signal.SIGINT)
             tcpdump_process.wait()  # Ensure the process terminates correctly
             time.sleep(1)
 
         except Exception as e:
             print(f"Error with tcpdump process: {e}")
             break
-        # subprocess.run("sudo tcpdump -U -i lo tcp port 65432 -w capture.pcap & sleep {}; sudo killall -s SIGINT tcpdump".format(1), shell=True, stdout=subprocess.PIPE)
-        # subprocess.run("sudo tcpdump -U -i lo tcp port 65432 -w capture.pcap", shell=True, stdout=subprocess.PIPE)
-        # time.sleep(2)  # Wait for the capture file to be written
-        # for finding RWin
-        
-
-        print(f"Snapshot {counter} captured.")
-        # Wait for the next interval based on Poisson distribution
-        interval = poisson_interval(mean_interval)
-        print(f"Waiting for {interval:.2f} seconds before the next snapshot.")
-        time.sleep(interval)
-
 
         tcpdump_output = subprocess.check_output("tcpdump -nn -tt -r capture.pcap 'tcp and src port 65432'", shell=True)
         tcpdump_output = tcpdump_output.decode("utf-8")
@@ -187,19 +155,7 @@ with open('MonitorOutput.csv', "w", newline='') as outfile:
         print("debugging for lines******************")
         # print(lines)
         parts = lines.split('TcpExt:')
-        # if len(parts) >= 3:
-        #     print("three or more params...")
-        #     b = parts[1]
-        #     c = parts[2]
-        # else:
-        #     print("less than 3 params...")
-        #     b = parts[0]  # If there's no 'TcpExt:', just take whatever is before it
-        #     c = ''  # Assign empty string if there's no second part
-
-        # a, b, c = lines.split('TcpExt:')
-        # b = b.split(',')
-        # b = b[0].split(' ')
-        # c = c.split(' ')
+      
         #############################################################################################
 
         # Check the structure of 'parts'
@@ -212,16 +168,14 @@ with open('MonitorOutput.csv', "w", newline='') as outfile:
             b = parts[0].strip()  # Take the first part as 'b'
             c = ''  # Assign empty string to 'c'
 
-        # Check if 'c' contains valid data
         if not c:
             print("ERROR: 'c' is empty or invalid. Cannot parse 'timeouts' and other values.")
-            timeouts = "0"  # Assign a default value to 'timeouts'
+            timeouts = "0" 
         else:
-            fields = c.split()  # Split 'c' into fields
-            # print(f"DEBUG: Fields in 'c': {fields}")
+            fields = c.split()  
+            print(f"DEBUG: Fields in 'c': {fields}")
 
-            # Check if there are enough fields to extract 'timeouts'
-            if len(fields) > 48:  # Ensure index 48 exists
+            if len(fields) > 48: 
                 fast_retrans = fields[45].strip()
                 timeouts = fields[48].strip()
                 print(f"DEBUG: Extracted fast_retrans = '{fast_retrans}'")
@@ -230,8 +184,6 @@ with open('MonitorOutput.csv', "w", newline='') as outfile:
                 print("ERROR: Not enough fields in 'c' to extract 'timeouts'.")
                 timeouts = "0"  # Assign a default value
 
-
-
         #####################################################################################################
         # fast_retrans = c[45]
         # timeouts = c[48]
@@ -239,12 +191,9 @@ with open('MonitorOutput.csv', "w", newline='') as outfile:
             ini_fast_retrans = fast_retrans
             ini_ntimeouts = timeouts
 
-
-
         # if len(columns['rwin']) > len(columns['nfast_retrans']):
         #     append_to_column(columns, 'nfast_retrans', int(fast_retrans) - int(ini_fast_retrans))
         #     append_to_column(columns, 'ntimeouts', int(timeouts) - int(ini_ntimeouts))
-
 
         if len(columns['rwin']) > len(columns['nfast_retrans']):
             try:
@@ -263,32 +212,11 @@ with open('MonitorOutput.csv', "w", newline='') as outfile:
                 print(f"ValueError: Could not convert timeouts or ini_ntimeouts to int. Error: {e}")
                 print(f"DEBUG: timeouts = '{timeouts}', ini_ntimeouts = '{ini_ntimeouts}'")
                 print(f"DEBUG: fast_retrans = '{fast_retrans}', ini_fast_retrans = '{ini_fast_retrans}'")
-
-
-        # try:
-        #     # Debugging output
-        #     print(f"DEBUG: timeouts = '{timeouts}', ini_ntimeouts = '{ini_ntimeouts}'")
-
-        #     # Ensure timeouts and ini_ntimeouts are valid integers
-        #     timeouts = timeouts.strip() or "0"
-        #     ini_ntimeouts = ini_ntimeouts.strip() or "0"
-
-        #     # Convert and append
-        #     append_to_column(columns, 'ntimeouts', int(timeouts) - int(ini_ntimeouts))
-
-        # except ValueError as e:
-        #     print(f"ValueError: Could not convert timeouts or ini_ntimeouts to int. Error: {e}")
-        #     print(f"DEBUG: timeouts = '{timeouts}', ini_ntimeouts = '{ini_ntimeouts}'")
-        #     break
-
-
-        # calculate next timeout
         if l * k > 0:
             timeout = k / (l / counter) / 1000
             if timeout < 1e-8:
                 timeout = 0.0005
 
-        # print statistics to output file
-        writer.writerow([columns[stat] for stat in stat_col_map])  # Write stats to CSV
+        writer.writerow([columns[stat] for stat in stat_col_map]) 
 
-        time.sleep(timeout)  # sleep before next iteration
+        time.sleep(timeout)  
