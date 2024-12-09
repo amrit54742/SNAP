@@ -186,9 +186,9 @@ with open('MonitorOutput.csv', "w", newline='') as outfile:
             ini_fast_retrans = fast_retrans
             ini_ntimeouts = timeouts
 
-        if len(columns['rwin']) > len(columns['nfast_retrans']):
-            append_to_column(columns, 'nfast_retrans', int(fast_retrans) - int(ini_fast_retrans))
-            # append_to_column(columns, 'ntimeouts', int(timeouts) - int(ini_ntimeouts))
+        # if len(columns['rwin']) > len(columns['nfast_retrans']):
+        #     append_to_column(columns, 'nfast_retrans', int(fast_retrans) - int(ini_fast_retrans))
+        #     append_to_column(columns, 'ntimeouts', int(timeouts) - int(ini_ntimeouts))
 
         # calculate next timeout
         if l * k > 0:
