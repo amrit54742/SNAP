@@ -166,29 +166,100 @@ with open('MonitorOutput.csv', "w", newline='') as outfile:
         print("debugging for lines******************")
         # print(lines)
         parts = lines.split('TcpExt:')
-        if len(parts) >= 3:
-            print("three or more params...")
-            b = parts[1]
-            c = parts[2]
-        else:
-            print("less than 3 params...")
-            b = parts[0]  # If there's no 'TcpExt:', just take whatever is before it
-            c = ''  # Assign empty string if there's no second part
+        # if len(parts) >= 3:
+        #     print("three or more params...")
+        #     b = parts[1]
+        #     c = parts[2]
+        # else:
+        #     print("less than 3 params...")
+        #     b = parts[0]  # If there's no 'TcpExt:', just take whatever is before it
+        #     c = ''  # Assign empty string if there's no second part
 
         # a, b, c = lines.split('TcpExt:')
         # b = b.split(',')
         # b = b[0].split(' ')
         # c = c.split(' ')
+        #############################################################################################
 
-        fast_retrans = c[45]
-        timeouts = c[48]
+        # Check the structure of 'parts'
+        if len(parts) >= 3:
+            print("DEBUG: Found three or more sections after splitting on 'TcpExt:'.")
+            b = parts[1].strip()  # Strip leading/trailing spaces or newlines
+            c = parts[2].strip()
+        else:
+            print("WARNING: Less than 3 sections found after splitting on 'TcpExt:'.")
+            b = parts[0].strip()  # Take the first part as 'b'
+            c = ''  # Assign empty string to 'c'
+
+        # Check if 'c' contains valid data
+        if not c:
+            print("ERROR: 'c' is empty or invalid. Cannot parse 'timeouts' and other values.")
+            timeouts = "0"  # Assign a default value to 'timeouts'
+        else:
+            fields = c.split()  # Split 'c' into fields
+            print(f"DEBUG: Fields in 'c': {fields}")
+
+            # Check if there are enough fields to extract 'timeouts'
+            if len(fields) > 48:  # Ensure index 48 exists
+                fast_retrans = fields[45].strip()
+                timeouts = fields[48].strip()
+                print(f"DEBUG: Extracted fast_retrans = '{fast_retrans}'")
+                print(f"DEBUG: Extracted timeouts = '{timeouts}'")
+            else:
+                print("ERROR: Not enough fields in 'c' to extract 'timeouts'.")
+                timeouts = "0"  # Assign a default value
+
+
+
+        #####################################################################################################
+        # fast_retrans = c[45]
+        # timeouts = c[48]
         if ini_fast_retrans == 0:
             ini_fast_retrans = fast_retrans
             ini_ntimeouts = timeouts
 
+
+
         # if len(columns['rwin']) > len(columns['nfast_retrans']):
         #     append_to_column(columns, 'nfast_retrans', int(fast_retrans) - int(ini_fast_retrans))
         #     append_to_column(columns, 'ntimeouts', int(timeouts) - int(ini_ntimeouts))
+
+
+        if len(columns['rwin']) > len(columns['nfast_retrans']):
+            try:
+
+                print(f"DEBUG: timeouts = '{timeouts}', ini_ntimeouts = '{ini_ntimeouts}'")
+                timeouts = timeouts.strip() or "0"
+                ini_ntimeouts = ini_ntimeouts.strip() or "0"
+                append_to_column(columns, 'ntimeouts', int(timeouts) - int(ini_ntimeouts))
+                ########################
+                print(f"DEBUG: fast_retrans = '{fast_retrans}', ini_fast_retrans = '{ini_fast_retrans}'")
+                fast_retrans = fast_retrans.strip() or "0"
+                ini_fast_retrans = ini_fast_retrans.strip() or "0"
+                append_to_column(columns, 'nfast_retrans', int(fast_retrans) - int(ini_fast_retrans))
+
+            except ValueError as e:
+                print(f"ValueError: Could not convert timeouts or ini_ntimeouts to int. Error: {e}")
+                print(f"DEBUG: timeouts = '{timeouts}', ini_ntimeouts = '{ini_ntimeouts}'")
+                print(f"DEBUG: fast_retrans = '{fast_retrans}', ini_fast_retrans = '{ini_fast_retrans}'")
+
+
+        # try:
+        #     # Debugging output
+        #     print(f"DEBUG: timeouts = '{timeouts}', ini_ntimeouts = '{ini_ntimeouts}'")
+
+        #     # Ensure timeouts and ini_ntimeouts are valid integers
+        #     timeouts = timeouts.strip() or "0"
+        #     ini_ntimeouts = ini_ntimeouts.strip() or "0"
+
+        #     # Convert and append
+        #     append_to_column(columns, 'ntimeouts', int(timeouts) - int(ini_ntimeouts))
+
+        # except ValueError as e:
+        #     print(f"ValueError: Could not convert timeouts or ini_ntimeouts to int. Error: {e}")
+        #     print(f"DEBUG: timeouts = '{timeouts}', ini_ntimeouts = '{ini_ntimeouts}'")
+        #     break
+
 
         # calculate next timeout
         if l * k > 0:
